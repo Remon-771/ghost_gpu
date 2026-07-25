@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GhostGPU — Live Cluster Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0713; --panel:#160f26; --panel2:#1c1433; --line:#2a2044; --line2:#392a5c;
+    --text:#ece8f6; --muted:#9a90b8;
+    --green:#2ee6a0; --amber:#f0a020; --red:#ff4d5e; --violet:#a855f7; --blue:#8b5cf6;
+    --pink:#e0218a; --grad:linear-gradient(100deg,#e0218a,#a855f7 60%,#f7941e);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+       font-family:'Space Grotesk','Segoe UI',system-ui,sans-serif;padding:18px 26px 40px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+         gap:20px;flex-wrap:wrap;margin-bottom:20px}
+  .brand h1{font-size:27px;letter-spacing:-.5px;font-weight:700}
+  .brand h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .brand p{color:var(--muted);font-size:13px;margin-top:3px}
+  .live{display:inline-flex;align-items:center;gap:7px;font-size:12px;
+        color:var(--muted);border:1px solid var(--line);border-radius:20px;
+        padding:5px 12px;background:var(--panel)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+       animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+         gap:14px;margin-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:12px;padding:15px 17px}
+  .card .label{color:var(--muted);font-size:11.5px;text-transform:uppercase;
+               letter-spacing:.9px}
+  .card .value{font-size:27px;font-weight:700;margin-top:6px}
+  .card.danger .value{color:var(--red)}
+  .card.good .value{color:var(--green)}
+  .card .sub{color:var(--muted);font-size:11.5px;margin-top:3px}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+           background:var(--panel);border:1px solid var(--line);
+           border-radius:12px;padding:12px 15px;margin-bottom:18px}
+  .toolbar .grp{display:flex;gap:8px;align-items:center}
+  .toolbar label{color:var(--muted);font-size:12px}
+  button{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+         border-radius:8px;padding:7px 13px;font-size:12.5px;cursor:pointer;
+         transition:.15s}
+  button:hover{border-color:var(--violet);background:#232838}
+  button.primary{background:var(--violet);border-color:var(--violet);font-weight:600}
+  button.primary:hover{filter:brightness(1.12)}
+  button.danger{background:#3a1f22;border-color:#5c2a2f;color:#ff9b93}
+  button.danger:hover{background:#4a262a}
+  select,input[type=number]{background:var(--panel2);color:var(--text);
+        border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px}
+  input[type=range]{accent-color:var(--violet)}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;
+        background:var(--panel);border:1px solid var(--line);border-radius:12px;
+        overflow:hidden}
+  th{background:#12151d;color:var(--muted);font-size:11px;text-transform:uppercase;
+     letter-spacing:.8px;text-align:left;padding:11px 13px;font-weight:600}
+  td{padding:11px 13px;border-top:1px solid var(--line);font-size:13px;
+     vertical-align:middle}
+  tr.ghost{background:linear-gradient(90deg,rgba(255,77,94,.16),transparent);animation:ghostpulse 2s ease-in-out infinite}
+  @keyframes ghostpulse{0%,100%{background:linear-gradient(90deg,rgba(255,77,94,.10),transparent)}50%{background:linear-gradient(90deg,rgba(255,77,94,.22),transparent)}}
+  tr.susp{background:linear-gradient(90deg,rgba(240,160,32,.12),transparent)}
+
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;
+        font-weight:700;letter-spacing:.4px}
+  .p-healthy{background:rgba(46,204,113,.16);color:var(--green)}
+  .p-susp{background:rgba(240,160,32,.18);color:var(--amber)}
+  .p-ghost{background:rgba(231,76,60,.2);color:var(--red)}
+  .p-start{background:rgba(139,148,168,.16);color:var(--muted)}
+
+  .jobname{font-weight:600}
+  .jobmeta{color:var(--muted);font-size:11px;margin-top:2px}
+  .reason{color:var(--muted);font-size:11.5px;max-width:280px}
+  .bar{width:70px;height:6px;background:#252a38;border-radius:4px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:4px}
+  .cost{font-variant-numeric:tabular-nums}
+  .cost.hot{color:var(--red);font-weight:700}
+  .await{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);
+         border:1px solid #6b4d16;border-radius:20px;padding:4px 10px;white-space:nowrap}
+  svg.spark{display:block}
+  .muted{color:var(--muted)}
+  footer{margin-top:22px;color:var(--muted);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:12.5px">
+  <a href="/" style="color:var(--muted);text-decoration:none">← Home</a>
+  <div style="display:flex;gap:18px">
+    <a href="/dashboard" style="color:var(--text);text-decoration:none">Operator</a>
+    <a href="/researcher" style="color:var(--muted);text-decoration:none">Researcher</a>
+  </div>
+</div>
+<header>
+  <div class="brand">
+    <h1>Ghost<span>GPU</span></h1>
+    <p>Busy is not productive — live silent-failure detection for GPU clusters</p>
+  </div>
+  <div class="live"><span class="dot"></span><span id="clock">connecting…</span></div>
+</header>
+
+<div class="cards">
+  <div class="card"><div class="label">Running jobs</div>
+    <div class="value" id="c-running">—</div><div class="sub">on the cluster</div></div>
+  <div class="card danger"><div class="label">Ghosts detected</div>
+    <div class="value" id="c-ghosts">—</div><div class="sub">dead but still burning</div></div>
+  <div class="card danger"><div class="label">Burning now</div>
+    <div class="value" id="c-burn">—</div><div class="sub" id="c-burnmin">—</div></div>
+  <div class="card good"><div class="label">Reclaimed</div>
+    <div class="value" id="c-reclaim">—</div><div class="sub" id="c-reclaimmin">—</div></div>
+  <div class="card"><div class="label">False-alarm rate</div>
+    <div class="value" id="c-far">—</div><div class="sub" id="c-farsub">owner-confirmed kills</div></div>
+</div>
+
+<div class="toolbar">
+  <div class="grp">
+    <label>Inject ghost into</label>
+    <select id="injJob"></select>
+    <select id="injType"></select>
+    <button class="primary" onclick="inject()">Inject silent failure</button>
+  </div>
+  <div class="grp" style="margin-left:auto">
+    <label>Speed</label>
+    <input type="range" id="speed" min="0.1" max="2" step="0.1" value="0.6"
+           oninput="setSpeed(this.value)" />
+    <button id="pauseBtn" onclick="togglePause()">Pause</button>
+    <button onclick="addJob()">+ Job</button>
+  </div>
+  <div class="grp">
+    <label>Ghost threshold</label>
+    <input type="number" id="thr" min="0.1" max="0.99" step="0.05" value="0.70"
+           style="width:74px" onchange="setThreshold()" />
+    <label>streak</label>
+    <input type="number" id="streak" min="1" max="6" step="1" value="2"
+           style="width:60px" onchange="setThreshold()" />
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Job</th><th>GPU</th><th>Utilisation</th><th>Loss</th>
+      <th>Ghost risk</th><th>Trend</th><th>Verdict</th>
+      <th>Why</th><th>Burned</th><th></th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<footer>
+  Two-stage detection · Isolation Forest (unsupervised) + XGBoost (supervised) ·
+  a job must stay anomalous across consecutive windows before it is called a ghost
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let paused = false, typesLoaded = false;
+
+function pill(v){
+  const m = {HEALTHY:['p-healthy','HEALTHY'], SUSPICIOUS:['p-susp','SUSPICIOUS'],
+             GHOST:['p-ghost','GHOST'], STARTING:['p-start','STARTING']};
+  const [c,t] = m[v] || m.STARTING;
+  return `<span class="pill ${c}">${t}</span>`;
+}
+function riskColor(p){ return p>=0.7 ? 'var(--red)' : p>=0.4 ? 'var(--amber)' : 'var(--green)'; }
+
+function spark(vals){
+  if(!vals || vals.length<2) return '<span class="muted">—</span>';
+  const w=64,h=18,n=vals.length;
+  const pts = vals.map((v,i)=>`${(i/(n-1)*w).toFixed(1)},${(h-v*h).toFixed(1)}`).join(' ');
+  const last = vals[vals.length-1];
+  return `<svg class="spark" width="${w}" height="${h}">
+    <polyline points="${pts}" fill="none" stroke="${riskColor(last)}" stroke-width="1.6"/></svg>`;
+}
+
+async function refresh(){
+  let s;
+  try{ s = await (await fetch('/api/state')).json(); }
+  catch(e){ $('clock').textContent = 'backend not reachable'; return; }
+
+  $('c-running').textContent  = s.stats.running;
+  $('c-ghosts').textContent   = s.stats.ghosts;
+  $('c-burn').textContent     = '$' + s.stats.burning_cost.toFixed(2);
+  $('c-burnmin').textContent  = s.stats.burning_minutes + ' GPU-minutes wasted';
+  $('c-reclaim').textContent  = '$' + s.stats.reclaimed_cost.toFixed(2);
+  $('c-reclaimmin').textContent = s.stats.reclaimed_minutes + ' GPU-minutes saved';
+  $('c-far').textContent = (s.stats.false_alarm_rate*100).toFixed(0) + '%';
+  $('c-farsub').textContent = s.stats.confirmed_kills + ' killed · ' + s.stats.false_alarms + ' spared by owner';
+  $('clock').textContent = 'live · ' + s.stats.running + ' jobs streaming';
+
+  if(!typesLoaded){
+    $('injType').innerHTML = s.ghost_types.map(t=>`<option value="${t}">${t}</option>`).join('');
+    $('thr').value = s.settings.ghost_prob;
+    $('streak').value = s.settings.ghost_streak;
+    typesLoaded = true;
+  }
+  const sel = $('injJob'), keep = sel.value;
+  sel.innerHTML = s.jobs.map(j=>`<option value="${j.job_id}">#${j.job_id} ${j.name}</option>`).join('');
+  if(keep) sel.value = keep;
+
+  $('rows').innerHTML = s.jobs.map(j=>{
+    const cls = j.verdict==='GHOST' ? 'ghost' : j.verdict==='SUSPICIOUS' ? 'susp' : '';
+    const risk = (j.ghost_prob*100).toFixed(0);
+    const loss = (j.loss===null||j.loss===undefined)
+        ? '<span style="color:var(--red);font-weight:700">NaN</span>'
+        : j.loss.toFixed(3);
+    const burned = j.wasted_cost>0
+        ? `<span class="cost hot">$${j.wasted_cost.toFixed(2)}</span>
+           <div class="jobmeta">${j.wasted_minutes} min · ${j.wasted_kwh.toFixed(2)} kWh</div>`
+        : '<span class="cost muted">—</span>';
+    let act = '';
+    if(j.kill_requested){
+      act = `<span class="await">⏳ awaiting owner</span>`;
+    } else if(j.verdict==='GHOST'){
+      act = `<button class="danger" onclick="requestKill(${j.job_id})">Request kill</button>`;
+    }
+    return `<tr class="${cls}">
+      <td><div class="jobname">${j.name}</div>
+          <div class="jobmeta">#${j.job_id} · ${j.owner} · ${j.minute} min</div></td>
+      <td class="muted">gpu-${j.gpu_id}</td>
+      <td>${j.gpu_util?.toFixed(0) ?? '—'}%
+          <div class="bar"><i style="width:${j.gpu_util ?? 0}%;background:var(--blue)"></i></div></td>
+      <td>${loss}</td>
+      <td>${risk}%
+          <div class="bar"><i style="width:${risk}%;background:${riskColor(j.ghost_prob)}"></i></div></td>
+      <td>${spark(j.spark)}</td>
+      <td>${pill(j.verdict)}</td>
+      <td class="reason">${j.reason || ''}</td>
+      <td>${burned}</td>
+      <td>${act}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function inject(){
+  const id = $('injJob').value, t = $('injType').value;
+  if(!id) return;
+  await fetch(`/api/inject/${id}?ghost_type=${t}`, {method:'POST'});
+  refresh();
+}
+async function requestKill(id){
+  await fetch(`/api/request_kill/${id}`,{method:'POST'});
+  refresh();
+}
+async function addJob(){ await fetch('/api/add_job',{method:'POST'}); refresh(); }
+async function setSpeed(v){ await fetch(`/api/speed?seconds=${v}`,{method:'POST'}); }
+async function togglePause(){
+  paused = !paused;
+  await fetch(`/api/speed?paused=${paused}`,{method:'POST'});
+  $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+}
+async function setThreshold(){
+  await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ghost_prob: parseFloat($('thr').value),
+                          ghost_streak: parseInt($('streak').value)})});
+}
+
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
