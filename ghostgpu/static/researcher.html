@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GhostGPU — Researcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0713; --panel:#160f26; --panel2:#1c1433; --line:#2a2044;
+    --text:#ece8f6; --muted:#9a90b8;
+    --green:#2ee6a0; --amber:#f0a020; --red:#ff4d5e; --violet:#a855f7; --blue:#8b5cf6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+       font-family:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+       padding:26px 20px 50px;display:flex;justify-content:center}
+  .wrap{width:100%;max-width:640px}
+
+  header{margin-bottom:22px}
+  h1{font-size:25px;letter-spacing:-.4px}
+  h1 span{background:linear-gradient(100deg,#e0218a,#a855f7 60%,#f7941e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:18px;margin-bottom:16px}
+  label{display:block;color:var(--muted);font-size:11.5px;
+        text-transform:uppercase;letter-spacing:.9px;margin-bottom:6px}
+  input,select{width:100%;background:var(--panel2);color:var(--text);
+        border:1px solid var(--line);border-radius:9px;padding:11px 12px;
+        font-size:14px;margin-bottom:12px}
+  button{width:100%;background:var(--violet);color:#fff;border:none;
+         border-radius:9px;padding:12px;font-size:14.5px;font-weight:600;
+         cursor:pointer;transition:.15s}
+  button:hover{filter:brightness(1.13)}
+  button.ghost{background:var(--panel2);border:1px solid var(--line);
+               color:var(--text);font-weight:500;margin-top:8px}
+
+  .job{border:1px solid var(--line);border-radius:12px;padding:16px;
+       margin-bottom:12px;background:var(--panel)}
+  .job.warn{border-color:#6b4d16;background:linear-gradient(180deg,rgba(240,160,32,.10),transparent)}
+  .job.dead{border-color:#5c2a2f;background:linear-gradient(180deg,rgba(231,76,60,.13),transparent)}
+  .jobtop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .jobname{font-size:16px;font-weight:600}
+  .jobmeta{color:var(--muted);font-size:11.5px;margin-top:3px}
+  .pill{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;
+        letter-spacing:.4px;white-space:nowrap}
+  .p-run{background:rgba(46,204,113,.16);color:var(--green)}
+  .p-warn{background:rgba(240,160,32,.18);color:var(--amber)}
+  .p-dead{background:rgba(231,76,60,.2);color:var(--red)}
+
+  .stats{display:flex;gap:18px;margin-top:14px;flex-wrap:wrap}
+  .stat .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.7px}
+  .stat .v{font-size:17px;font-weight:700;margin-top:2px}
+  .v.nan{color:var(--red)}
+
+  .banner{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.5}
+  .banner.warn{background:rgba(240,160,32,.12);border:1px solid #6b4d16;color:#f5c877}
+  .banner.dead{background:rgba(231,76,60,.12);border:1px solid #5c2a2f;color:#ff9b93}
+  .banner b{display:block;margin-bottom:3px}
+
+  .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:26px 10px}
+  .foot{color:var(--muted);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6}
+  a{color:var(--violet)}
+  .alert{border:1px solid #5c2a2f;background:linear-gradient(180deg,rgba(255,77,94,.14),transparent);
+         border-radius:16px;padding:20px;margin-bottom:16px}
+  .alert h3{font-size:17px;color:#ff9b93;margin-bottom:4px}
+  .alert .who{color:var(--muted);font-size:12.5px;margin-bottom:14px}
+  .ev-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;
+            text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+  .charts{display:flex;gap:12px;flex-wrap:wrap}
+  .chart{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+         border-radius:10px;padding:10px}
+  .chart .cl{font-size:11px;color:var(--muted);margin-bottom:6px}
+  .signs{margin-top:6px}
+  .sign{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+        background:var(--panel2);margin-bottom:6px;font-size:13px}
+  .sign .mk{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+            font-size:12px;font-weight:700;flex-shrink:0}
+  .sign.on .mk{background:rgba(255,77,94,.2);color:#ff9b93}
+  .sign.off .mk{background:rgba(46,230,160,.16);color:var(--green)}
+  .sign .sv{color:var(--muted);font-size:11.5px}
+  .decide{display:flex;gap:10px;margin-top:16px}
+  .decide button{flex:1;padding:13px;border-radius:10px;font-size:14px;font-weight:600;
+                 cursor:pointer;border:none}
+  .btn-alive{background:var(--green);color:#05231a}
+  .btn-dead{background:var(--red);color:#fff}
+  .decide button:hover{filter:brightness(1.1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a href="/" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);text-decoration:none;display:inline-block;margin-bottom:14px">← Home</a>
+  <header>
+    <h1>Ghost<span>GPU</span> · Researcher</h1>
+    <div class="sub">Submit a training job and watch its health in real time</div>
+  </header>
+
+  <div class="card" id="loginCard">
+    <label>Your name</label>
+    <input id="owner" placeholder="e.g. tanvir" autocomplete="off" />
+    <label>Model to train</label>
+    <select id="model">
+      <option>unet3d-brats</option>
+      <option>resnet50-chest</option>
+      <option>vit-histo</option>
+      <option>unet2d-lung</option>
+      <option>effnet-derm</option>
+      <option>swin-mri</option>
+    </select>
+    <button onclick="start()">Start training job</button>
+    <button class="ghost" onclick="justWatch()">I already have a job — just watch</button>
+  </div>
+
+  <div id="content"></div>
+
+  <div class="foot">
+    Your job runs on the shared cluster.<br />
+    GhostGPU monitors it and alerts the operator if it stops making progress.
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let owner = null;
+
+function saveOwner(v){
+  owner = v.trim();
+  if(!owner) return false;
+  $('loginCard').style.display = 'none';
+  refresh();
+  return true;
+}
+async function start(){
+  const v = $('owner').value;
+  if(!saveOwner(v)) return;
+  await fetch(`/api/submit?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent($('model').value)}`,
+              {method:'POST'});
+  refresh();
+}
+function justWatch(){ saveOwner($('owner').value); }
+
+function pill(v){
+  if(v==='GHOST')      return '<span class="pill p-dead">FAILED</span>';
+  if(v==='SUSPICIOUS') return '<span class="pill p-warn">CHECKING</span>';
+  return '<span class="pill p-run">RUNNING</span>';
+}
+
+async function refresh(){
+  if(!owner) return;
+  let d;
+  try{ d = await (await fetch(`/api/my?owner=${encodeURIComponent(owner)}`)).json(); }
+  catch(e){ return; }
+
+  let html = '';
+
+  // ---- FALSE-KILL GUARD: operator has asked to stop one of my jobs ----
+  for(const pj of (d.pending||[])){
+    const ev = pj.evidence || {};
+    html += `<div class="alert">
+      <h3>⚠ The cluster operator wants to stop "${pj.name}"</h3>
+      <div class="who">job #${pj.job_id} · GhostGPU thinks it has stopped learning.
+        Please confirm before it is killed.</div>
+
+      <div class="ev-title">Evidence — ${ev.signs_triggered||0} of ${ev.signs_total||4} danger signs, held over time</div>
+      <div class="signs">${(ev.signs||[]).map(sg => `
+        <div class="sign ${sg.triggered?'on':'off'}">
+          <div class="mk">${sg.triggered?'!':'✓'}</div>
+          <div><div>${sg.label}</div><div class="sv">${sg.value}</div></div>
+        </div>`).join('')}</div>
+
+      <div class="charts">
+        <div class="chart"><div class="cl">Loss trend</div>${spark(ev.loss_series, '#ff9b93')}</div>
+        <div class="chart"><div class="cl">GPU utilisation</div>${spark(ev.gpu_series, '#8b5cf6', 100)}</div>
+        <div class="chart"><div class="cl">Ghost risk</div>${spark((ev.prob_series||[]).map(x=>x*100), '#f0a020', 100)}</div>
+      </div>
+
+      <div class="decide">
+        <button class="btn-alive" onclick="decide(${pj.job_id}, false)">My job is alive — keep it</button>
+        <button class="btn-dead" onclick="decide(${pj.job_id}, true)">Yes, it's dead — stop it</button>
+      </div>
+    </div>`;
+  }
+
+  for(const t of d.terminated){
+    html += `<div class="job dead">
+      <div class="jobtop">
+        <div><div class="jobname">${t.name}</div>
+             <div class="jobmeta">job #${t.job_id} · stopped at ${t.minute} min</div></div>
+        <span class="pill p-dead">TERMINATED</span>
+      </div>
+      <div class="banner dead">
+        <b>Your job was stopped by the cluster operator.</b>
+        GhostGPU detected that it had stopped learning: ${t.reason}.
+        It had already used <b style="display:inline">${t.wasted_minutes} GPU-minutes
+        (about $${t.wasted_cost.toFixed(2)})</b> without producing any result.
+        The GPU has been returned to the queue.
+      </div></div>`;
+  }
+
+  for(const j of d.jobs){
+    const cls = j.verdict==='GHOST' ? 'dead' : j.verdict==='SUSPICIOUS' ? 'warn' : '';
+    const loss = (j.loss===null||j.loss===undefined)
+        ? '<span class="v nan">NaN</span>' : `<span class="v">${j.loss.toFixed(3)}</span>`;
+    let banner = '';
+    if(j.verdict==='SUSPICIOUS'){
+      banner = `<div class="banner warn"><b>⚠ GhostGPU is checking your job</b>
+        Something looks unusual: ${j.reason}. If this continues, the operator will be alerted.</div>`;
+    } else if(j.verdict==='GHOST'){
+      banner = `<div class="banner dead"><b>🛑 Your job has stopped learning</b>
+        ${j.reason}. The GPU is still busy but no useful work is happening —
+        about $${j.wasted_cost.toFixed(2)} wasted so far. The operator has been alerted.</div>`;
+    }
+    html += `<div class="job ${cls}">
+      <div class="jobtop">
+        <div><div class="jobname">${j.name}</div>
+             <div class="jobmeta">job #${j.job_id} · running ${j.minute} min</div></div>
+        ${pill(j.verdict)}
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">GPU</div><div class="v">${j.gpu_util?.toFixed(0) ?? '—'}%</div></div>
+        <div class="stat"><div class="k">Loss</div>${loss}</div>
+        <div class="stat"><div class="k">Health</div><div class="v">${((1-j.ghost_prob)*100).toFixed(0)}%</div></div>
+      </div>
+      ${banner}
+    </div>`;
+  }
+
+  if(!html) html = '<div class="empty">No jobs yet. Start one above.</div>';
+  $('content').innerHTML = html;
+}
+
+$('owner').addEventListener('keydown', e => { if(e.key === 'Enter') start(); });
+function spark(vals, color, fixedMax){
+  vals = (vals||[]).filter(v => v!==null && v!==undefined);
+  if(vals.length < 2) return '<div style="color:var(--muted);font-size:12px">—</div>';
+  const w=150, h=40, mn=Math.min(...vals), mx=fixedMax!==undefined?fixedMax:Math.max(...vals);
+  const rng=(mx-mn)||1;
+  const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-((v-mn)/rng)*h).toFixed(1)}`).join(' ');
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+}
+async function decide(id, approve){
+  await fetch(`/api/decision/${id}?approve=${approve}`, {method:'POST'});
+  refresh();
+}
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
